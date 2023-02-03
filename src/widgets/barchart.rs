@@ -44,7 +44,7 @@ pub struct BarChart<'a> {
     /// Style for the widget
     style: Style,
     /// Slice of (label, value) pair to plot on the chart
-    data: &'a [(&'a str, u64)],
+    data: Vec<(String, u64)>,
     /// Value necessary for a bar to reach the maximum height (if no value is specified,
     /// the maximum value in the data is taken as reference)
     max: Option<u64>,
@@ -57,7 +57,7 @@ impl<'a> Default for BarChart<'a> {
         BarChart {
             block: None,
             max: None,
-            data: &[],
+            data: vec![],
             values: Vec::new(),
             bar_style: Style::default(),
             bar_width: 1,
@@ -71,12 +71,9 @@ impl<'a> Default for BarChart<'a> {
 }
 
 impl<'a> BarChart<'a> {
-    pub fn data(mut self, data: &'a [(&'a str, u64)]) -> BarChart<'a> {
-        self.data = data;
-        self.values = Vec::with_capacity(self.data.len());
-        for &(_, v) in self.data {
-            self.values.push(format!("{}", v));
-        }
+    pub fn data(mut self, data: Vec<(String, u64)>) -> BarChart<'a> {
+        self.data = data.clone();
+        self.values = data.iter().map(|v| format!("{}", v.1)).collect();
         self
     }
 
@@ -150,17 +147,17 @@ impl<'a> Widget for BarChart<'a> {
             (chart_area.width / (self.bar_width + self.bar_gap)) as usize,
             self.data.len(),
         );
-        let mut data = self
+        let mut data: Vec<(String, u64)> = self
             .data
             .iter()
             .take(max_index)
-            .map(|&(l, v)| {
+            .map(|(l, v)| {
                 (
-                    l,
-                    v * u64::from(chart_area.height - 1) * 8 / std::cmp::max(max, 1),
+                    l.clone(),
+                    *v * u64::from(chart_area.height - 1) * 8 / std::cmp::max(max, 1),
                 )
             })
-            .collect::<Vec<(&str, u64)>>();
+            .collect::<Vec<(String, u64)>>();
         for j in (0..chart_area.height - 1).rev() {
             for (i, d) in data.iter_mut().enumerate() {
                 let symbol = match d.1 {
@@ -192,8 +189,8 @@ impl<'a> Widget for BarChart<'a> {
             }
         }
 
-        for (i, &(label, value)) in self.data.iter().take(max_index).enumerate() {
-            if value != 0 {
+        for (i, (label, value)) in self.data.iter().take(max_index).enumerate() {
+            if *value != 0 {
                 let value_label = &self.values[i];
                 let width = value_label.width() as u16;
                 if width < self.bar_width {
